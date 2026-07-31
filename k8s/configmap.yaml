@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-server-config
+  labels:
+    app: mysql-server
+data:
+  my.cnf: |
+    [mysqld]
+    port=3306
+    bind-address=0.0.0.0
+    user=mysql
+    pid-file=/var/lib/mysql/mysqld.pid
+    socket=/var/run/mysqld/mysqld.sock
+  init-script.sql: |
+    CREATE DATABASE IF NOT EXISTS shiny_db;

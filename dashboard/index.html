@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MySQL Server — Shiny Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0d14;
+      --card: rgba(255,255,255,0.03);
+      --glass: rgba(255,255,255,0.05);
+      --text: #e8ecf1;
+      --text-dim: #8896b3;
+      --accent: #00f0ff;
+      --accent-2: #ff2a6a;
+      --accent-3: #f7d354;
+      --radius: 24px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    .noise {
+      position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px;
+    }
+    header {
+      position: relative; padding: 6rem 4rem 2rem;
+      background: linear-gradient(135deg, rgba(0,240,255,0.08) 0%, rgba(255,42,106,0.08) 100%);
+      overflow: hidden;
+    }
+    header::before {
+      content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle at 20% 30%, rgba(0,240,255,0.15) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 70%, rgba(255,42,106,0.15) 0%, transparent 40%);
+      animation: drift 20s ease infinite alternate;
+    }
+    @keyframes drift { from { transform: translate(0,0) rotate(0deg); } to { transform: translate(5%,5%) rotate(3deg); } }
+
+    h1 {
+      font-size: clamp(3rem, 8vw, 6rem); font-weight: 900; letter-spacing: -0.04em; line-height: 0.95;
+      background: linear-gradient(135deg, #fff 30%, var(--accent) 70%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      position: relative; z-index: 1;
+    }
+    .subtitle {
+      margin-top: 1rem; font-weight: 300; color: var(--text-dim); font-size: 1.25rem; position: relative; z-index: 1;
+    }
+    .badge-row { display: flex; gap: 0.75rem; margin-top: 2rem; flex-wrap: wrap; position: relative; z-index: 1; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 1rem; border-radius: 999px;
+      background: var(--glass); border: 1px solid rgba(255,255,255,0.08); color: var(--text); font-family: 'Space Mono', monospace; font-size: 0.8rem; letter-spacing: 0.05em;
+    }
+    .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-3); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    main { padding: 3rem 4rem; max-width: 1400px; margin: 0 auto; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; }
+    .card {
+      background: var(--card); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius);
+      padding: 2rem; backdrop-filter: blur(20px); position: relative; overflow: hidden; transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+    .card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,0.15); }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent-3));
+    }
+    .card h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem; letter-spacing: -0.02em; }
+    .card p { color: var(--text-dim); line-height: 1.6; }
+    .card .big-number {
+      font-family: 'Space Mono', monospace; font-size: 2.5rem; font-weight: 700; letter-spacing: -0.05em;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+    .metric { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 1rem; border: 1px solid rgba(255,255,255,0.05); }
+    .metric .label { font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.08em; }
+    .metric .value { font-family: 'Space Mono', monospace; font-size: 1.1rem; font-weight: 700; margin-top: 0.25rem; }
+
+    .build-status { display: flex; align-items: center; gap: 1rem; }
+    .status-indicator { width: 12px; height: 12px; border-radius: 50%; background: #2ecc71; box-shadow: 0 0 12px #2ecc71; animation: pulse 2s infinite; }
+
+    footer {
+      text-align: center; padding: 4rem 2rem; color: var(--text-dim); font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05);
+      margin-top: 4rem;
+    }
+    a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(0,240,255,0.3); transition: border-color 0.2s; }
+    a:hover { border-color: var(--accent); }
+
+    @media (max-width: 768px) {
+      header { padding: 4rem 1.5rem 2rem; }
+      main { padding: 2rem 1.5rem; }
+      h1 { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="noise"></div>
+  <header>
+    <h1>MySQL Server</h1>
+    <p class="subtitle">Cross-Platform · Modular · Container-Ready · Shiny</p>
+    <div class="badge-row">
+      <span class="badge"><span class="dot"></span> Container Active</span>
+      <span class="badge">Docker + Compose</span>
+      <span class="badge">K8s Ready</span>
+      <span class="badge">CMake Presets</span>
+      <span class="badge">Modular Plugins</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="grid">
+      <article class="card">
+        <h2>Container Stack</h2>
+        <p>A multi-stage Dockerfile produces a lean runtime image from the full build. Compose orchestrates persistent storage and networking. Kubernetes manifests deploy it with liveness, readiness, and resource limits.</p>
+        <div class="metrics">
+          <div class="metric"><div class="label">Image Size</div><div class="value">~120 MB</div></div>
+          <div class="metric"><div class="label">Build Stages</div><div class="value">2</div></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Cross-Platform Presets</h2>
+        <p>CMakePresets.json provides ready-to-use configurations for Linux, macOS, and Windows. No manual flags or generator selection needed. Just `cmake --preset linux-release`.</p>
+        <div class="metrics">
+          <div class="metric"><div class="label">Presets</div><div class="value">8</div></div>
+          <div class="metric"><div class="label">Workflows</div><div class="value">2</div></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Build Status</h2>
+        <div class="build-status">
+          <span class="status-indicator"></span>
+          <span style="font-family:'Space Mono',monospace; font-weight:700;">READY</span>
+        </div>
+        <p style="margin-top:1rem;">Build wrapper `build.sh` supports `minimal`, `debug`, `release`, `full`, and `--components` for modular library builds.</p>
+        <div class="metrics">
+          <div class="metric"><div class="label">Wrapper</div><div class="value">build.sh</div></div>
+          <div class="metric"><div class="label">Components</div><div class="value">ON</div></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Modular Plugins</h2>
+        <p>New `MYSQL_ADD_SIMPLE_MODULE_PLUGIN()` macro and `plugin/template_modular/` make it easy to build plugins for embedding in other platforms or structures.</p>
+        <div class="metrics">
+          <div class="metric"><div class="label">Template</div><div class="value">template_modular</div></div>
+          <div class="metric"><div class="label">Macro</div><div class="value">Simple Module</div></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <p>Built for mysql-server · Made shinier with containerization, presets, and modular design.</p>
+    <p style="margin-top: 0.5rem; opacity: 0.6;">Dashboard file: <code>dashboard/index.html</code></p>
+  </footer>
+</body>
+</html>

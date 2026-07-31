@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  mysql-eco:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: runtime
+    image: mysql-server:eco
+    container_name: mysql-eco-core
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: eco
+      MYSQL_DATABASE: eco_db
+    networks:
+      - eco-net
+    volumes:
+      - mysql-eco-data:/var/lib/mysql
+      - ../plugin/template_modular:/usr/lib/mysql/plugin/template:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-peco"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  dashboard-eco:
+    image: nginx:alpine
+    container_name: mysql-eco-dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ../dashboard/index.html:/usr/share/nginx/html/index.html:ro
+      - ../system/dashboard-data.json:/usr/share/nginx/html/data.json:ro
+    networks:
+      - eco-net
+    depends_on:
+      - mysql-eco
+    restart: unless-stopped
+
+  plugin-monitor:
+    image: alpine:latest
+    container_name: mysql-eco-monitor
+    command: ["sh", "-c", "while true; do echo '{\"plugin_status\":\"connected\",\"timestamp\":'$(date +%s)' }' >> /data/monitor.json; sleep 5; done"]
+    volumes:
+      - ../system/dashboard-data.json:/data/monitor.json
+    networks:
+      - eco-net
+    depends_on:
+      - mysql-eco
+
+volumes:
+  mysql-eco-data:
+    driver: local
+
+networks:
+  eco-net:
+    driver: bridge
