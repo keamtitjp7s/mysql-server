@@ -337,6 +337,33 @@ ENDMACRO(MYSQL_ADD_PLUGIN)
 
 # Add all CMake projects under storage  and plugin 
 # subdirectories, configure sql_builtin.cc
+# ------------------------------------------------------------------
+# Simplified macro for modular / embedded plugin development
+# ------------------------------------------------------------------
+# MYSQL_ADD_SIMPLE_MODULE_PLUGIN(plugin_name source1 [source2 ...])
+#
+# Creates a MODULE_ONLY plugin with sensible defaults for embedding:
+#   - MODULE_ONLY (shared library, no server binary needed)
+#   - VISIBILITY_HIDDEN (clean public interface)
+#   - NO_UNDEFINED (strict linking on Linux)
+#   - AUTO-set MODULE_OUTPUT_NAME based on plugin name
+#
+# Example:
+#   MYSQL_ADD_SIMPLE_MODULE_PLUGIN(my_plugin my_plugin.cc)
+# ------------------------------------------------------------------
+MACRO(MYSQL_ADD_SIMPLE_MODULE_PLUGIN plugin_arg)
+  SET(plugin ${plugin_arg})
+  SET(ARG_SOURCES ${ARGN})
+  # Derive module output name (e.g., my_plugin -> libmy_plugin)
+  MYSQL_ADD_PLUGIN(${plugin_arg}
+    ${ARG_SOURCES}
+    MODULE_ONLY
+    VISIBILITY_HIDDEN
+    NO_UNDEFINED
+    MODULE_OUTPUT_NAME "${plugin}"
+  )
+ENDMACRO()
+
 MACRO(CONFIGURE_PLUGINS)
   FILE(GLOB dirs_storage ${CMAKE_SOURCE_DIR}/storage/*)
   FILE(GLOB dirs_plugin ${CMAKE_SOURCE_DIR}/plugin/*)

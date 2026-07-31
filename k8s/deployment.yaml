@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-server-deployment
+  labels:
+    app: mysql-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-server
+  template:
+    metadata:
+      labels:
+        app: mysql-server
+    spec:
+      containers:
+        - name: mysql-server
+          image: mysql-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: "root"
+          volumeMounts:
+            - name: mysql-config
+              mountPath: /etc/mysql
+              readOnly: true
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+          resources:
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - "-h"
+                - "localhost"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - mysqladmin
+                - ping
+                - "-h"
+                - "localhost"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: mysql-config
+          configMap:
+            name: mysql-server-config
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: mysql-server-pvc

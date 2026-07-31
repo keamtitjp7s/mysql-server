@@ -1,0 +1,25 @@
+{
+  "system": "eco-connected",
+  "timestamp": 1753900000,
+  "preset": "full",
+  "branch": "arena/019fb568-mysql-server",
+  "platform": "Linux x86_64",
+  "build_artifacts": "ready",
+  "container_status": "running",
+  "plugin_status": "ready",
+  "components_only": false,
+  "dashboard_url": "http://localhost:8080",
+  "modules": [
+    "build_wrapper",
+    "cmake_presets",
+    "modular_plugins",
+    "container_stack",
+    "dashboard_ui"
+  ],
+  "connections": [
+    "build.sh -> docker-compose -> dashboard",
+    "plugin/template_modular -> k8s/deployment.yaml",
+    "CMakePresets.json -> build_eco"
+  ],
+  "last_updated": "2026-07-30T23:48:00Z"
+}
